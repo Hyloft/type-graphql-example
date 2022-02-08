@@ -17,8 +17,11 @@ export class User extends BaseEntity{
     @Column()
     lastName: string;
 
-    @Column()
+    @Column() // registered to db but not showing
     password: string;
+
+    @Field() // not registered to db but showing
+    name:string;
 
     @Field()
     @Column("text",{unique:true})

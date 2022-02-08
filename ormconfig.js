@@ -1,4 +1,4 @@
-{
+module.exports={
     "name":"default",
     "type": "postgres",
     "host": "localhost",
@@ -8,7 +8,7 @@
     "database": "type-graphql-learning",
     "synchronize":true,
     "logging":true,
-    "entities":[
-        "/src/entity/*.*"
+    "entities": [
+        __dirname+"/src/entity/*.*"
     ]
  }
