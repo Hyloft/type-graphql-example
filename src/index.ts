@@ -10,6 +10,7 @@ import { redis } from './redis';
 import cors from 'cors';
 import { LoginResolver } from './modules/user/Login';
 import { ApolloServerPluginLandingPageGraphQLPlayground } from "apollo-server-core";
+import { MeResolver } from './modules/user/Me';
 
 
 
@@ -27,7 +28,15 @@ const main = async()=>{
   await createConnection()
 
   const schema = await buildSchema({
-      resolvers: [RegisterResolver,LoginResolver],
+      resolvers: [RegisterResolver,LoginResolver,MeResolver],
+      authChecker: ({ context :{req}}) => { //you can add @Authorized() to query or mutation
+        // if(req.session.userId){
+        //   return true
+        // }
+        // return false;
+        return !!req.session.userId
+      }
+      
   }) 
 
   const apolloServer = new ApolloServer({
