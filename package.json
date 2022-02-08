@@ -15,6 +15,7 @@
     "@types/node": "^17.0.16",
     "apollo-server-express": "^3.6.2",
     "bcryptjs": "^2.4.3",
+    "class-validator": "^0.13.2",
     "express": "^4.17.2",
     "graphql": "^15.8.0",
     "install": "^0.13.0",
