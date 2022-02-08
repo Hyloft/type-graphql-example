@@ -15,7 +15,7 @@ import {
       });
     }
   }
-  
+
   export function isEmailAlreadyExist(validationOptions?: ValidationOptions) {
     return function (object: Object, propertyName: string) {
       registerDecorator({
