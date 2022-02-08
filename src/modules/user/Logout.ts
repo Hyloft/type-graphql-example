@@ -1,0 +1,21 @@
+import { Resolver, Mutation, Ctx } from 'type-graphql';
+import { MyContext } from '../../types/MyContext';
+
+@Resolver()
+export class LogoutResolver {
+  @Mutation(()=>Boolean)
+  async Logout(
+      @Ctx() ctx:MyContext
+  ):Promise<Boolean>{
+      return new Promise((res,rej)=>{
+          ctx.req.session.destroy(err=>{
+              if(err){
+                  return rej(false)
+              }
+
+              ctx.res.clearCookie('qid')
+              return res(true)
+          })
+      })
+  }
+}
