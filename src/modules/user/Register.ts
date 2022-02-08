@@ -18,8 +18,8 @@ export class RegisterResolver {
     async register(
         @Arg('firstName') firstName:string,
         @Arg('lastName') lastName:string,
-        @Arg('email') password:string,
-        @Arg('password') email:string
+        @Arg('email') email:string,
+        @Arg('password') password:string
     ):Promise<User> {
         const hashedPassword = await bcrypt.hash(password,12);
 
