@@ -9,12 +9,12 @@ export class RegisterResolver {
         return 'hello world'
     }
 
-    @Mutation(() => String) //cannot return string
+    @Mutation(() => User)
     async register(
         @Arg('firstName') firstName:string,
-        @Arg('firstName') lastName:string,
-        @Arg('firstName') password:string,
-        @Arg('firstName') email:string
+        @Arg('lastName') lastName:string,
+        @Arg('email') password:string,
+        @Arg('password') email:string
     ):Promise<User> {
         const hashedPassword = await bcrypt.hash(password,12);
 
