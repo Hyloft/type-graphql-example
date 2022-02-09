@@ -11,6 +11,7 @@ import { ApolloServerPluginLandingPageGraphQLPlayground } from "apollo-server-co
 
 
 import session from 'express-session';
+import { graphqlUploadExpress } from 'graphql-upload';
 
 declare module 'express-session' {
   export interface SessionData {
@@ -62,6 +63,7 @@ const main = async()=>{
     },
   };
 
+  app.use(graphqlUploadExpress());
   app.use(session(sessionOption));
   //
 
