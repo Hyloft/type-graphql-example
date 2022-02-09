@@ -25,7 +25,7 @@ const main = async()=>{
   await createConnection()
 
   const schema = await buildSchema({
-      resolvers: [__dirname + '/modules/**/*.ts'],
+      resolvers: [__dirname + '/modules/*/*.ts'],
       authChecker: ({ context :{req}}) => { //you can add @Authorized() to query or mutation
         // if(req.session.userId){
         //   return true
