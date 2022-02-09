@@ -20,7 +20,7 @@ export class User extends BaseEntity{
     @Column() // registered to db but not showing
     password: string;
 
-    @Field() // not registered to db but showing
+    @Field({complexity:4}) // not registered to db but showing
     name(@Root() parent:User):string{
         return `${parent.firstName} ${parent.lastName}`
     }

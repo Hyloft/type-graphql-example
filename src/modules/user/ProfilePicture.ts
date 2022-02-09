@@ -6,7 +6,7 @@ import { Upload } from "../../types/Upload";
 
 @Resolver()
 export class ProfilePictureResolver {
-  @Mutation(() => Boolean)
+  @Mutation(() => Boolean,{complexity:14})
   async addProfilePicture(@Arg("picture", () => GraphQLUpload)
   {
     createReadStream,

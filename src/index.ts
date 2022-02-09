@@ -12,6 +12,8 @@ import { ApolloServerPluginLandingPageGraphQLPlayground } from "apollo-server-co
 
 import session from 'express-session';
 import { graphqlUploadExpress } from 'graphql-upload';
+import createComplexityRule, { simpleEstimator,fieldExtensionsEstimator } from 'graphql-query-complexity';
+import { GraphQLError } from 'graphql';
 
 declare module 'express-session' {
   export interface SessionData {
@@ -20,6 +22,36 @@ declare module 'express-session' {
 }
 
 const RedisStore = connectRedis(session)
+
+
+const ruleComplexity = createComplexityRule({
+  maximumComplexity: 13,
+
+  variables: {},
+
+
+  onComplete: (complexity: number) => {console.log('Determined query complexity: ', complexity)},
+
+  createError: (max: number, actual: number) => {
+    return new GraphQLError(`Query is too complex: ${actual}. Maximum allowed complexity: ${max}`);
+  },
+
+  estimators: [
+    fieldExtensionsEstimator(),
+
+    simpleEstimator({
+      defaultComplexity: 1
+    })
+  ]
+});
+
+
+
+
+
+
+
+
 
 
 const main = async()=>{
@@ -40,7 +72,10 @@ const main = async()=>{
   const apolloServer = new ApolloServer({
     schema,
     context: ({req,res}:any)=> ({req,res}),
-    plugins: [ApolloServerPluginLandingPageGraphQLPlayground]
+    plugins: [ApolloServerPluginLandingPageGraphQLPlayground,],
+    validationRules:[
+      ruleComplexity
+    ]
   })
 
   const app = Express()
