@@ -2,18 +2,19 @@ import 'reflect-metadata'
 import {ApolloServer} from "apollo-server-express"
 import Express from "express"
 import { buildSchema} from "type-graphql";
-import { createConnection } from 'typeorm';
+import { createConnection, useContainer } from 'typeorm';
 import connectRedis from 'connect-redis';
 import { redis } from './redis';
 import cors from 'cors';
 import { ApolloServerPluginLandingPageGraphQLPlayground } from "apollo-server-core";
 
-
-
 import session from 'express-session';
 import { graphqlUploadExpress } from 'graphql-upload';
 import createComplexityRule, { simpleEstimator,fieldExtensionsEstimator } from 'graphql-query-complexity';
 import { GraphQLError } from 'graphql';
+
+import {Container} from 'typeorm-typedi-extensions';
+
 
 declare module 'express-session' {
   export interface SessionData {
@@ -22,6 +23,8 @@ declare module 'express-session' {
 }
 
 const RedisStore = connectRedis(session)
+
+useContainer(Container)
 
 
 const ruleComplexity = createComplexityRule({
@@ -47,18 +50,12 @@ const ruleComplexity = createComplexityRule({
 
 
 
-
-
-
-
-
-
-
 const main = async()=>{
   await createConnection()
 
   const schema = await buildSchema({
       resolvers: [__dirname + '/modules/*/*.ts'],
+      container:Container,
       authChecker: ({ context :{req}}) => { //you can add @Authorized() to query or mutation
         // if(req.session.userId){
         //   return true

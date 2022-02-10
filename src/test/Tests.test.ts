@@ -63,6 +63,7 @@ mutation{
     id
     name
     studentId
+    student{id}
   }
 }
 `;
@@ -185,7 +186,10 @@ describe("SchoolResolver",()=>{
       data: {
         createProject: {
           name:projectName,
-          studentId:student.id.toString()
+          studentId:student.id.toString(),
+          student:{
+            id:student.id.toString()
+          }
         }
       }
     });

@@ -1,9 +1,14 @@
 import { Arg, Mutation, Resolver, Int, Query, } from 'type-graphql';
 import { Student } from '../../entity/Student';
 import { Project } from '../../entity/Project';
+import { StudentRepo } from './repo/StudentRepo';
+import { InjectRepository } from 'typeorm-typedi-extensions';
 
 @Resolver()
 export class SchoolResolver {
+  
+  @InjectRepository(StudentRepo)
+  private readonly studentRepo: StudentRepo; 
   
   @Mutation(()=>Project)
   async createProject(
@@ -47,7 +52,7 @@ export class SchoolResolver {
 
   @Query(()=>[Student])
   async students(){
-    let students = await Student.find()
+    let students = this.studentRepo.getAll()
     return students
   }
 
