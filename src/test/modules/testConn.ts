@@ -12,6 +12,6 @@ export const testConn=(drop : boolean=false)=>{
         synchronize:true,
         dropSchema:drop,
         entities: [
-            __dirname+"/../entity/*.*"]
+            __dirname+"/../../entity/*.*"]
     })
 }

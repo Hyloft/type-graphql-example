@@ -1,5 +1,5 @@
 import { Connection } from 'typeorm';
-import { testConn } from './testConn';
+import { testConn } from './modules/testConn';
 import { redis } from '../redis';
 import { registerTest } from './userTests/RegisterTest';
 import { meTest } from './userTests/MeTest';

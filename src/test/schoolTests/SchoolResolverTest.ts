@@ -1,4 +1,4 @@
-import { gCall } from '../gCall';
+import { gCall } from '../modules/gCall';
 import faker from '@faker-js/faker';
 import { Student } from '../../entity/Student';
 import { Project } from '../../entity/Project';

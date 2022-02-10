@@ -1,3 +1,3 @@
-import { testConn } from "./testConn";
+import { testConn } from "./modules/testConn";
 
 testConn(true).then(()=>process.exit());
