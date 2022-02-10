@@ -4,6 +4,8 @@ import { gCall } from './gCall';
 import faker from '@faker-js/faker';
 import { User } from '../entity/User'
 import { redis } from '../redis';
+import { Student } from '../entity/Student';
+import { Project } from '../entity/Project';
 
 let conn: Connection;
 beforeAll(async () => {
@@ -43,6 +45,29 @@ mutation Register($data: RegisterInput!) {
 }
 `;
 
+const createStudentMutation = (name:string):string=> `
+mutation{createStudent(name:"${name}")
+  {
+    id
+    name
+	}
+}
+`;
+
+const createProjectMutation = (name:string,studentId:number):string=> `
+mutation{
+  createProject(
+    name:"${name}",
+    studentId:${studentId}
+  ){
+    id
+    name
+    studentId
+  }
+}
+`;
+
+
 describe("Register", () => {
   it("create user", async () => {
     const user = {
@@ -74,8 +99,6 @@ describe("Register", () => {
     expect(dbUser!.confirmed).toBeFalsy()
     expect(dbUser!.email).toBe(user.email)
     expect(dbUser!.password == user.password).toBeFalsy()
-    console.log(dbUser)
-    console.log(response)
   });
   
   
@@ -94,9 +117,6 @@ describe("Me", () => {
         source: meQuery,
         userId:user.id
       });
-      console.log("GET USER OUTPUT : /__/_/")
-      console.log(user)
-      console.log(response)
   
       expect(response).toMatchObject({
         data: {
@@ -121,5 +141,57 @@ describe("Me", () => {
         }
       });
     });
-  
-  });
+});
+
+describe("SchoolResolver",()=>{
+
+  it('createStudent',async()=>{
+    const studentName = faker.name.firstName()
+
+    const response = await gCall({
+      source: createStudentMutation(studentName)
+    });
+
+    console.log('LOGGİNG RESPONSE')
+    console.log(response)
+
+    expect(response).toMatchObject({
+      data: {
+        createStudent: {
+          name:studentName
+        }
+      }
+    });
+
+    const dbStudent = await Student.findOne({name:studentName})
+    console.log(dbStudent)
+    console.log(response)
+    expect(dbStudent).toBeDefined()
+    expect(dbStudent?.name).toEqual(studentName)
+
+  })
+
+  it('createProjectWithUser',async()=>{
+    const projectName = faker.name.jobTitle()
+    const studentName = faker.name.firstName()
+    const student = await Student.create({name:studentName}).save()
+
+    console.log()
+    const response = await gCall({
+      source: createProjectMutation(projectName,student.id),
+    });
+
+    expect(response).toMatchObject({
+      data: {
+        createProject: {
+          name:projectName,
+          studentId:student.id.toString()
+        }
+      }
+    });
+
+    const dbProject = await Project.findOne({name:projectName})
+    expect(dbProject).toBeDefined()
+    expect(dbProject?.studentId).toEqual(student.id)
+  })
+})
