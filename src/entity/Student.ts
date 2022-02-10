@@ -1,21 +1,21 @@
-import {Entity, PrimaryGeneratedColumn, Column, OneToMany, ManyToMany, JoinTable} from "typeorm"; import {Project} from "./Project"; 
-import { Classes } from './Classes';
-import { Field, ID } from "type-graphql";
+import { Entity, PrimaryGeneratedColumn, Column, BaseEntity, OneToMany } from 'typeorm'; import {Project} from "./Project"; 
+import { Field, ID, ObjectType } from "type-graphql";
+import { TypeormLoader } from 'type-graphql-dataloader';
 
+@ObjectType()
 @Entity() 
-export class Student {  
+export class Student extends BaseEntity{  
    @Field(() => ID)
    @PrimaryGeneratedColumn() 
    id: number; 
    
+   @Field()
    @Column() 
    name: string; 
    
-   @OneToMany(() => Project, project => project.student)
-   //@JoinColumn()
-   projects: Project[];  
+   @OneToMany(()=>Project,project=>project.student)
+   @Field(() => [Project],{nullable:true})
+   @TypeormLoader()
+   projects: Project[]
 
-   @ManyToMany(()=> Classes)
-   @JoinTable()
-   classes: Classes[]
 }
