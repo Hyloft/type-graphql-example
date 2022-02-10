@@ -1,4 +1,4 @@
-import { Arg, Mutation, Resolver, Int, Query } from 'type-graphql';
+import { Arg, Mutation, Resolver, Int, Query, } from 'type-graphql';
 import { Student } from '../../entity/Student';
 import { Project } from '../../entity/Project';
 

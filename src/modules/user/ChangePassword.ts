@@ -6,6 +6,12 @@ import { ChangePasswordInput } from "./changePassword/ChangePasswordInput";
 import bcrypt from 'bcryptjs';
 import { MyContext } from "src/types/MyContext";
 
+declare module 'express-session' {
+    export interface SessionData {
+        userId: any;
+    }
+}
+
 @Resolver()
 export class ChangePasswordResolver {
     @Mutation(() => User,{nullable:true})
