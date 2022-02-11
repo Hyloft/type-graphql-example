@@ -500,6 +500,7 @@ and this one will be handy when uploading files
 Resolvers helps us to create api with graphql
 
 Here is example 'hello world' example:
+#### Query example ('GET' in REST API)
 ```ts
 @Query(() => String)
 async hello() {
@@ -522,3 +523,37 @@ query
 ```
 
 Just send it. Then you'll get response of hello world.
+
+#### MUTATION EXAMPLE ('PUT','POST','GET' in REST API)
+
+```ts
+@Mutation(() => String,{nullable:true})
+async fullname(
+    @Arg('name') name:string,
+    @Arg('surname') surname:string,
+    @Arg('age') age:number
+):Promise<String | null> {
+    if(age<18){
+        return null
+    }
+    return `${name} ${surname}`
+}
+```
+it is post kinda request example.
+We are passing name,surname and age. Then if the person older than 17, it returns fullname.
+
+Mutation:
+```graphql
+mutation{
+    fullname(name:"jhon",surname:"doe",age:18)
+}
+```
+it will return
+
+```json
+{
+  "data": {
+    "fullname": "jhon doe"
+  }
+}
+```
