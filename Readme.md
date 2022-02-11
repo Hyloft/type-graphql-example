@@ -1,5 +1,5 @@
-<h1 align="center">TypeGraphQL API Example</h1>
 <p align="center"><img width=100% src="media/typ.png"></p>
+<h1 align="center">TypeGraphQL API Example</h1>
 
 
 ### Techs that has been used:
@@ -496,3 +496,29 @@ export interface Upload {
 ```
 and this one will be handy when uploading files
 
+## RESOLVER BASICS
+Resolvers helps us to create api with graphql
+
+Here is example 'hello world' example:
+```ts
+@Query(() => String)
+async hello() {
+    return 'hello world'
+}
+```
+So what it does ?
+<p align="center"><img width=100% src="media/queryexplain.png"></p><br>
+
+How to send query and get *'hello world'* response?
+<p align="center"><img width=100% src="media/queryhelloworld.png"></p>
+
+Go to [`http://localhost:4000/graphql`](http://localhost:4000/graphql).<br>
+Then write a hello query:
+```graphql
+query
+{
+  hello
+}
+```
+
+Just send it. Then you'll get response of hello world.

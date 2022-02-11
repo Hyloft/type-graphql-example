@@ -10,7 +10,7 @@ import { createConfirmationUrl } from '../utils/createConfirmationUrl';
 export class RegisterResolver {
     @UseMiddleware(isAuth) // @Authorized would work to but I created it myself.
     @Query(() => String)
-    async hello() {
+    async hello():Promise<String> {
         return 'hello world'
     }
 
