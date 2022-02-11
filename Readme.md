@@ -525,7 +525,7 @@ So what it does ?
 <p align="center"><img width=100% src="media/queryexplain.png"></p><br>
 
 How to send query and get *'hello world'* response?
-<p align="center"><img width=100% src="media/queryhelloworld.png"></p>
+<p align="center"><img width=100% src="media/queryhw.png"></p>
 
 Go to [`http://localhost:4000/graphql`](http://localhost:4000/graphql).<br>
 Then write a hello **query**:
