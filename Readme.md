@@ -193,6 +193,9 @@ npm i --save-dev jest ts-jest @types/uuid @types/nodemailer @types/express @type
 * **src**
     * *index.ts*
     * *redis.ts*
+    * **types**
+        * *MyContext.ts*
+        * *Upload.ts*
     * **test**
         * *setup.ts*
         * **modules**
@@ -457,3 +460,39 @@ import { graphqlUploadExpress } from 'graphql-upload';
 ```
 `apolloServer` is starting with `app` middleware.<br>
 Then `app.listen` command to start the server.
+
+**redis.ts**
+```ts
+import Redis from 'ioredis';
+
+export const redis = new Redis();
+```
+
+#### ABOUT TYPES:
+We need Upload and Context type.
+
+**MyContext.ts**
+```ts
+import { Request,Response } from "express"
+
+
+export interface MyContext{
+    req: Request;
+    res: Response;
+}
+```
+we need this for getting **context types** while using **req** or **res** method in **resolvers**.
+
+**Upload.ts**
+```ts
+import { Stream } from "stream";
+
+export interface Upload {
+  filename: string;
+  mimetype: string;
+  encoding: string;
+  createReadStream: () => Stream;
+}
+```
+and this one will be handy when uploading files
+
