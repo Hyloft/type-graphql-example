@@ -204,7 +204,7 @@ npm i --save-dev jest ts-jest @types/uuid @types/nodemailer @types/express @type
 
 
 **index.ts** (explained one by one)<br>
-*will look like this when it's done.*
+*it will look like this when it's done.*
 ```ts
 import 'reflect-metadata'
 import {ApolloServer} from "apollo-server-express"
@@ -500,10 +500,22 @@ and this one will be handy when uploading files
 Resolvers helps us to create api with graphql
 
 Here is example 'hello world' example:
+
+#### First of all we need to define Resolver.
+
+```ts
+@Resolver()
+export class exampleResolver{
+    //Queries and Mutations here
+    //...
+}
+```
+
 #### Query example ('GET' in REST API)
 ```ts
+//in resolver
 @Query(() => String)
-async hello() {
+async hello():Promise<String> {
     return 'hello world'
 }
 ```
@@ -514,7 +526,7 @@ How to send query and get *'hello world'* response?
 <p align="center"><img width=100% src="media/queryhelloworld.png"></p>
 
 Go to [`http://localhost:4000/graphql`](http://localhost:4000/graphql).<br>
-Then write a hello query:
+Then write a hello **query**:
 ```graphql
 query
 {
@@ -527,6 +539,7 @@ Just send it. Then you'll get response of hello world.
 #### MUTATION EXAMPLE ('PUT','POST','GET' in REST API)
 
 ```ts
+//in resolver
 @Mutation(() => String,{nullable:true})
 async fullname(
     @Arg('name') name:string,
@@ -542,7 +555,7 @@ async fullname(
 it is post kinda request example.
 We are passing name,surname and age. Then if the person older than 17, it returns fullname.
 
-Mutation:
+**Mutation**:
 ```graphql
 mutation{
     fullname(name:"jhon",surname:"doe",age:18)
@@ -557,3 +570,62 @@ it will return
   }
 }
 ```
+because age older than 17. Otherwise we would get null.
+
+#### Mutation with custom interface/type
+```ts
+interface Person {
+    name:string
+    surname:string
+    age:number
+    fullname:string
+}
+
+//in resolver
+    @Mutation(() => Person,{nullable:true})
+    async getPerson(
+        @Arg('name') name:string,
+        @Arg('surname') surname:string,
+        @Arg('age') age:number
+    ):Promise<Person | null> {
+        if(age<18){return null}
+        let human: Person
+        human = {
+            name:name,
+            surname:surname,
+            age:age,
+            fullname: `${name} ${surname}`
+        }
+        return human
+    }
+```
+
+this time it will return `Person` object which has different fields.
+In graphql, we can define which parts we want and which parts we don't.<br>
+According to this, I want just *fullname* and *age* as response.
+
+```graphql
+mutation
+{
+    getPerson(name:"foo",surname:"bar",age:23)
+    {
+        fullname,
+        age
+    }
+}
+```
+! If it will return an object, I have to define which fields I want.<br>
+It will return **response** like this: 
+
+```json
+{
+  "data": {
+    "getPerson":{
+        "fullname":"foo bar",
+        "age":23
+    }
+  }
+}
+```
+
+That was the basics of resolvers.
