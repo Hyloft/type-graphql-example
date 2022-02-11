@@ -15,12 +15,14 @@
     * [Basic Setup](#basic-setup)
     * [Next Level Setup (For all features)](#next-level-setup)
 * [Resolver Basics](#resolver-basics)
-* [Sending Query With GraphQL](#sending-queries)
+* [Sending Query With GraphQL](#query-example-get-in-rest-api)
 * [Entities](#entities)
-* [Object Type](#object-type)
-* [Validation](#validation)
-* [Resolvers](#resolvers)
+* [Object Type](#what-is-objecttype)
+* [Field Complexity](#what-is-field-complexity)
+* [Validation](#validations)
 * [Input Type](#input-type)
+* [Custom Validator](#custom-validator)
+* [Resolvers](#resolvers)
 * [Register Resolver](#register-resolver)
 * [Login resolver](#login-resolver)
 * [Authorization](#authorization)
@@ -629,3 +631,164 @@ It will return **response** like this:
 ```
 
 That was the basics of resolvers.
+
+## ENTITIES
+Entities are **database models** and **object types**.<br>
+Basically Entity means orm system.
+
+We can look into user entity which used in project.<br>
+**User entity**:
+
+```ts
+import { Field, ID, ObjectType, Root } from "type-graphql";
+import {Entity, PrimaryGeneratedColumn, Column, BaseEntity} from "typeorm";
+
+@Entity()
+@ObjectType()
+export class User extends BaseEntity{
+
+    @Field(()=>ID)
+    @PrimaryGeneratedColumn()
+    id: number;
+
+    @Field()
+    @Column()
+    firstName: string;
+
+    @Field()
+    @Column()
+    lastName: string;
+
+    @Column() // registered to db but not showing
+    password: string;
+
+    @Field({complexity:4}) // not registered to db but showing
+    name(@Root() parent:User):string{
+        return `${parent.firstName} ${parent.lastName}`
+    }
+
+    @Field()
+    @Column("text",{unique:true})
+    email: string;
+
+    @Column('bool',{default:false})
+    confirmed:boolean;
+}
+```
+`User` extends from `BaseEntity` so we can call it in code and access db models.
+#### What is ObjectType()
+```ts
+@Entity()
+@ObjectType()
+export class User extends BaseEntity{
+```
+This tag means `User` is not just a db model. We will use it for responses.<br>
+#### Fields and Columns
+`Field()` is extention just for `ObjectType`. It don't register field to the database. Only show up on response.<br>
+`Column()` is extention just for `db`. It will be unaccessable for api responses.
+
+#### What is Field Complexity
+```ts
+    @Field({complexity:4}) // not registered to db but showing
+    name(@Root() parent:User):string{
+        return `${parent.firstName} ${parent.lastName}`
+    }
+```
+You can see the name field has complexity.
+If we added a complexity rule to server, name field will count 4 as complexity point (normally each field counts one).
+
+### Validations
+Here is example **password** entity which used in project:
+```ts
+import { Length } from "class-validator";
+
+@InputType()
+export class PasswordInput {
+
+    @Field()
+    @Length(4,20)
+    password:string
+}
+```
+Validations comes from `class-validator` package. It has a lot of cool features.<br>
+Also did you realize that this class is InputType? So what is it?
+### Input Type
+Lets look into *RegisterInput.ts* which used in project:
+
+```ts
+import { Length, IsEmail } from "class-validator";
+import { Field, InputType } from "type-graphql";
+import { isEmailAlreadyExist } from "./isEmailAlreadyExist";
+import { PasswordInput } from '../shared/PasswordInput';
+
+@InputType()
+export class RegisterInput extends PasswordInput{
+    @Field()
+    @Length(2,255,{message:"must be around 2 and 255 characters"})
+    firstName:string
+
+    @Field()
+    @Length(2,255)
+    lastName:string
+
+    @Field()
+    @IsEmail()
+    @isEmailAlreadyExist({message:"email already in use"})
+    email:string
+}
+```
+`InputType()` is **just uses for mutation's input types**.
+Request's expected values can be define with this.
+
+also RefisterInput extends from PasswordInput so it has password field.
+
+`isEmail()` and `Length()` are ready validators.<br>
+`isEmailAlreadyExist` is created one.<br>
+So how it is created?
+
+### Custom Validator
+we can look at isEmailAlreadyExist.ts file which used in project:
+```ts
+import { User } from '../../../entity/User';
+import {
+    registerDecorator,
+    ValidationOptions,
+    ValidatorConstraint,
+    ValidatorConstraintInterface,
+} from 'class-validator';
+  
+@ValidatorConstraint({ async: true })
+export class isEmailAlreadyExistConstraint implements ValidatorConstraintInterface {
+validate(email: string) {
+    return User.findOne({where:{email}}).then(user => {
+    if (user) return false;
+    return true;
+    });
+}
+}
+
+export function isEmailAlreadyExist(validationOptions?: ValidationOptions) {
+return function (object: Object, propertyName: string) {
+    registerDecorator({
+    target: object.constructor,
+    propertyName: propertyName,
+    options: validationOptions,
+    constraints: [],
+    validator: isEmailAlreadyExistConstraint,
+    });
+};
+}
+```
+
+It is like a template. Only field we have to imagine is validate function:
+```ts
+validate(email: string) {
+    return User.findOne({where:{email}}).then(user => {
+    if (user) return false;
+    return true;
+    });
+}
+```
+it wants an email as a string , checks and returns.<br>
+
+That's how custom validators can be created.
