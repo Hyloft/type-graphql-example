@@ -200,7 +200,8 @@ npm i --save-dev jest ts-jest @types/uuid @types/nodemailer @types/express @type
             * *testConn.ts*
 
 
-**index.ts** (explained one by one)
+**index.ts** (explained one by one)<br>
+*will look like this when it's done.*
 ```ts
 import 'reflect-metadata'
 import {ApolloServer} from "apollo-server-express"
@@ -319,10 +320,6 @@ declare module 'express-session' {
 helps to reach `userId` in **session** (fixes session error).
 <br>
 <br>
-```ts
-const RedisStore = connectRedis(session)
-```
-for the redis connection with express-session inside. It will help later.
 
 **main()**
 <br>let's look inside main function
@@ -343,7 +340,7 @@ import { ApolloServerPluginLandingPageGraphQLPlayground } from "apollo-server-co
 
 //imported before
 
-//in the main()
+//in the main() function:
   useContainer(Container)
   const schema = await buildSchema({
       resolvers: [__dirname + '/modules/*/*.ts'],
@@ -402,6 +399,8 @@ const ruleComplexity = createComplexityRule({
 });
 ```
 it basically limits the request's complexity. will explain in [#complexity](#complexity)
+<br>
+<br><br>
 
 ```ts
 import Express from "express"
@@ -414,6 +413,8 @@ import session from 'express-session';
   const app = Express()
   app.use(cors({credentials:true,origin:"http://localhost:4000"}))
 
+  const RedisStore = connectRedis(session)
+  
   const sessionOption: session.SessionOptions = {
     store: new RedisStore({
       client: redis as any,
@@ -431,3 +432,28 @@ import session from 'express-session';
   };
   app.use(session(sessionOption));
 ```
+`app` is basic express app with cors. Credentials for cookies<br> 
+`ResdisStore` with `express-session` in it. Helps to use redis for session.<br>
+`sessionOption` for expres-session
+* `store` uses `RedisStore` which created with *express-session* before  
+* `qid` the name of cookie<br><br>
+
+```ts
+import { graphqlUploadExpress } from 'graphql-upload';
+//imported before
+
+  app.use(graphqlUploadExpress());
+```
+`graphqlUploadExpress` helps upload files to server.<br><br>
+
+```ts
+  await apolloServer.start()
+
+  apolloServer.applyMiddleware({app});
+
+  app.listen(4000,()=>{
+      console.log('server started on http://localhost:4000')
+  })
+```
+`apolloServer` is starting with `app` middleware.<br>
+Then `app.listen` command to start the server.
