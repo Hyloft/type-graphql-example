@@ -37,7 +37,7 @@
 * [Testing Resolvers](#testing-resolvers)
 
 ## BASIC SETUP
-**First of all if you don't have a up and running postgres and redis server you should install it .**
+**First of all if you don't have an up and running postgres and redis server you should install it .**
 
 You can install `Redis` from [here](https://github.com/MicrosoftArchive/redis/releases/download/win-3.2.100/Redis-x64-3.2.100.msi) and `Postgres` from [here](https://www.enterprisedb.com/downloads/postgres-postgresql-downloads).
 

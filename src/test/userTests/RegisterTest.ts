@@ -17,6 +17,7 @@ mutation Register($data: RegisterInput!) {
 `;
 
 export const registerTest = ()=> describe("Register", () => {
+    jest.setTimeout(15000)
     it("create user", async () => {
       const user = {
         firstName: faker.name.firstName(),
