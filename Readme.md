@@ -1458,3 +1458,72 @@ Now let's look at how to append student to existing project: (we can also make p
 ```
 
 and that's it. If you wanna learn more, check out [here](#https://www.tutorialspoint.com/typeorm/typeorm_relations.htm#:~:text=Relations%20are%20used%20to%20refer,powerful%20and%20efficiently%20store%20information.).
+
+## Dependency Injection
+Dependency injection is a really useful pattern that helps in decoupling parts of the app.<br>
+We need to install @typedi first.
+
+```bash
+npm i --save typedi typeorm-typedi-extensions
+```
+
+in ***index.ts***:
+```ts
+import { useContainer } from 'typeorm';
+import {Container} from 'typeorm-typedi-extensions';
+//imported before
+
+//in the main() function:
+  useContainer(Container) //use the container from typedi for typeorm
+  
+  const schema = await buildSchema({
+      //...
+      container:Container,//also use it in the schema
+      //...
+  }) 
+```
+Our resolvers will then be able to declare their dependencies and TypeGraphQL will use the container to solve them.<br>
+### Repository
+Before that, let's create example **repository** for [Project Entity](#relations-in-entities):<br>
+***ProjectRepo.ts***
+```ts 
+import { EntityRepository, Repository } from "typeorm";
+import { Project } from '../../../entity/Project';
+
+@EntityRepository(Project)
+export class ProjectRepo extends Repository<Project>{
+
+  async getAll() {
+    return await this.find()
+  }
+
+  async getOne(id: number) {
+    console.log('getting one')
+    return await this.findOne({id:id})
+  }
+}
+``` 
+With this way we can declare useful functions for entities and use them in resolvers.<br>
+### Injection part
+Now, let's edit our school resolver using this repo.<br>
+***SchoolResolver.ts***
+```ts
+import { Arg, Mutation, Resolver, Int, Query, } from 'type-graphql';
+import { Project } from '../../entity/Project';
+import { ProjectRepo } from './repo/ProjectRepo';
+import { InjectRepository } from 'typeorm-typedi-extensions';
+
+@Resolver()
+export class SchoolResolver {
+
+  @InjectRepository(ProjectRepo) // injecting repository
+  private readonly projectRepo: ProjectRepo; // set repository's name
+  
+  @Query(()=>[Project])
+  async projects(){
+    let projects = projectRepo.getAll()//using projectRepo's function
+    return projects
+  }
+  
+}
+```
