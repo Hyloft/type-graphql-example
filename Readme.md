@@ -27,6 +27,7 @@
 * [Login resolver](#login-resolver)
 * [Authorization](#authorization)
 * [Logout](#logout)
+* [Sending Email](#sending-email)
 * [Confirmation Mail](#confirmation-mail)
 * [Forgot Password Mail](#forgot-password-mail)
 * [File Upload](#file-upload)
@@ -408,6 +409,7 @@ it basically limits the request's complexity. will explain in [#complexity](#com
 <br>
 <br><br>
 
+#### Redis and session
 ```ts
 import Express from "express"
 import connectRedis from 'connect-redis';
@@ -464,7 +466,7 @@ import { graphqlUploadExpress } from 'graphql-upload';
 `apolloServer` is starting with `app` middleware.<br>
 Then `app.listen` command to start the server.
 
-**redis.ts**
+#### redis.ts
 ```ts
 import Redis from 'ioredis';
 
@@ -989,4 +991,276 @@ import { isAuth } from '../middleware/isAuth';
   async hello():Promise<String> {
       return 'hello world'
   }
+```
+
+## Logout
+```ts
+//..in resolver
+  @Mutation(()=>Boolean)
+  async Logout(
+      @Ctx() ctx:MyContext //context type
+  ):Promise<Boolean>{
+      return new Promise((res,rej)=>{
+          ctx.req.session.destroy(err=>{//destroy cookie
+              if(err){
+                  return rej(false)//return if there is any err (user not logged in)
+              }
+
+              ctx.res.clearCookie('qid')//destroy cookie called "qid"
+              return res(true)
+          })
+      })
+  }
+```
+
+like this. So basic.
+
+## Sending email
+`node-mailer` is helping in this part. [Nodemailer Docs](https://nodemailer.com/about/)
+```bash
+npm install --save nodemailer
+```
+We have ``sendEmail()`` function like this:
+
+***sendEmail.ts***
+```ts
+import nodemailer from "nodemailer";
+
+// async..await is not allowed in global scope, must use a wrapper
+export async function sendEmail(email:string,url:string) {
+  let testAccount = await nodemailer.createTestAccount();
+
+  const transporter = nodemailer.createTransport({
+    host: "smtp.ethereal.email",
+    port: 587,
+    secure: false, // true for 465, false for other ports
+    auth: {
+      user: testAccount.user, // generated ethereal user
+      pass: testAccount.pass, // generated ethereal password
+    },
+  });
+
+  // send mail with defined transport object
+  let info = await transporter.sendMail({
+    from: '"Fred Foo 👻" <foo@example.com>', // sender address
+    to: email,
+    subject: "Hello ✔", // Subject line
+    text: "Hello world?", // plain text body
+    html: `<a href="${url}">confirm email<a>`, // html body
+  });
+
+  console.log("Message sent: %s", info.messageId);
+  // Message sent: <b658f8ca-6296-ccf4-8306-87d57a0b4321@example.com>
+
+  // Preview only available when sending through an Ethereal account
+  console.log("Preview URL: %s", nodemailer.getTestMessageUrl(info));
+  // Preview URL: https://ethereal.email/message/WaQKMgKddxQDoou...
+}
+
+```
+
+only part that we have to notice is the:
+```ts
+let info = await transporter.sendMail({
+  from: '"Fred Foo 👻" <foo@example.com>', // sender address
+  to: email,
+  subject: "Hello ✔", // Subject line
+  text: "Hello world?", // plain text body
+  html: `<a href="${url}">confirm email<a>`, // html body
+});
+```
+* `from` means sender name and mail
+* `to` who is sending to
+* `html` is the part that we send `url` to user
+
+Okay, we have an email sender template so far. Let's use it.
+
+## Confirmation Mail
+
+We want to users confirm their accounts with email. They shouldn't loggin without confirmation.
+
+We have to add `confirmed` column to [`User`](#user-entity) entity. And `login mutation` must check the user confirmed first.
+We can basically add this part for this:
+```ts
+if(!user.confirmed){
+    return null
+}
+```
+Then we have to **create a confirmation url** for spesific user, send them while registering and confirm them when they clicked the link.<br>
+We have to create confirmation token for this. And we will store this token while using `Redis` store.
+
+<p><img width=20% src="media/rediss.png"></p>
+
+### Redis Store:
+
+Setup explained before in ["redis and session" in index.ts](#redis-and-session) and ['redis.ts'](#redists)
+
+We have to different prefixes for different tokens. Because will use this token system for change password token too. User shouldn't change password with confirmation mail.
+
+***redisPrefixes.ts***
+```ts
+export const forgotPasswordPrefix = 'forgot-password:'
+export const confirmationPrefix = 'user-confirm:'
+```
+
+let's create ***createConfirmationUrl.ts***
+```ts
+import { redis } from '../../redis'
+import {v4} from 'uuid'
+import { confirmationPrefix } from '../constants/redisPrefixes';
+
+export const createConfirmationUrl = (userId:number)=>{
+    const token = v4()
+    redis.set(confirmationPrefix + token,userId,"ex",60*60*24) // one day expiration
+
+    return `http://localhost:4000/user/confirm/${token}`
+}
+```
+we are setting `confirmationPrefix + token` into redis with `userId`. We will use `userId` to get the value we set.
+
+We just add this to ***RegisterResolver.ts***:
+```ts
+//.. into register mutation
+    await sendEmail(email, createConfirmationUrl(user.id))
+```
+then we need to create a mutation for confirm the user.
+
+***ConfirmUser.ts***
+```ts
+import { Arg, Mutation, Resolver } from "type-graphql";
+import { User } from '../../entity/User';
+import { redis } from '../../redis';
+import { confirmationPrefix } from '../constants/redisPrefixes';
+
+@Resolver()
+export class ConfirmUserResolver {
+    @Mutation(() => Boolean)
+    async confirmUser(
+        @Arg('token') token:string, //token is our url
+    ):Promise<Boolean> {
+        const userId = await redis.get(confirmationPrefix+ token) // getting userId with url
+
+        if(!userId){
+            return false
+        }//checks userId and return false if not exist
+
+        await User.update({id: parseInt(userId,10)},{confirmed:true}) // confirmed
+        await redis.del(confirmationPrefix+token)// deleting after confirmation
+
+        return true
+    }
+}
+```
+remember the sendemail function:
+```ts
+return `http://localhost:4000/user/confirm/${token}`
+```
+we are passing the token in the url. And we can get our userId with this token.
+```ts
+const userId = await redis.get(confirmationPrefix+ token)
+```
+and token should deleted after the update of user.
+```ts
+await redis.del(confirmationPrefix+token)
+```
+
+`confirmUser mutation` helps to confirm the user.  
+
+### Forgot Password Mail
+Same logic with last part.
+
+***ForgotPassword.ts***<br>
+we want just email for this. We'll send a mail to change password.
+```ts
+import { Arg, Mutation, Resolver } from "type-graphql";
+import { v4 } from "uuid";
+import { User } from '../../entity/User';
+import { redis } from '../../redis';
+import { forgotPasswordPrefix } from "../constants/redisPrefixes";
+import { sendEmail } from "../utils/sendEmail";
+
+@Resolver()
+export class ForgotPasswordResolver {
+    @Mutation(() => Boolean)
+    async forgotPassword(
+        @Arg('email') email:string, //email input
+    ):Promise<Boolean> {
+        const user = await User.findOne({where:{email}})//get userId with email
+
+        if(!user){//return if user not exist.
+            return true //but return true always.
+        }
+        //CREATING TOKEN AND SET INTO REDIS
+        const token = v4()
+        await redis.set(forgotPasswordPrefix + token,user.id,"ex",60*60*24) // for one day
+    
+        const url= `http://localhost:4000/user/change-password/${token}`
+
+        await sendEmail(email,url) // send the mail
+        
+        return true
+    }
+}
+```
+I created confirmation mail and token in here because this resolver is not too complicated as much as register resolver.
+
+After that we need a new mutation called changePassword.<br>
+***ChangePassword.ts***
+```ts
+import { Arg,Ctx, Mutation, Resolver } from "type-graphql";
+import { User } from '../../entity/User';
+import { redis } from '../../redis';
+import { forgotPasswordPrefix } from "../constants/redisPrefixes";
+import { ChangePasswordInput } from "./changePassword/ChangePasswordInput";
+import bcrypt from 'bcryptjs';
+import { MyContext } from "src/types/MyContext";
+
+declare module 'express-session' {//this fixes errors
+    export interface SessionData {
+        userId: any;
+    }
+}
+
+@Resolver()
+export class ChangePasswordResolver {
+    @Mutation(() => User,{nullable:true})
+    async changePassword(
+        @Arg('data') {token,password}:ChangePasswordInput,//data type
+        @Ctx() ctx : MyContext // user will login after change.
+    ):Promise<User|null> {
+        const userId = await redis.get(forgotPasswordPrefix+token)//get user into redis
+
+        if(!userId){//return null if not exist into redis
+            return null
+        }
+
+        const user = await User.findOne({where:{id:userId}})//get user
+
+        if(!user){//return if not exist
+            return null
+        }
+
+        await redis.del(forgotPasswordPrefix + token)//delete token
+
+        //Change password
+        user.password = await bcrypt.hash(password,12)
+        await user.save()//also user.update will work.
+
+        ctx.req.session!.userId = user.id //push user to cookies
+
+        return user
+    }
+}
+```
+only thing we have to notice is we have a different type called `ChangePasswordInput`:
+
+```ts
+import { Field, InputType } from "type-graphql";
+import { PasswordInput } from '../shared/PasswordInput';
+
+@InputType()
+export class ChangePasswordInput extends PasswordInput {
+    @Field()
+    token:string
+}
 ```
