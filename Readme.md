@@ -32,7 +32,7 @@
 * [Forgot Password Mail](#forgot-password-mail)
 * [File Upload](#file-upload)
 * [Relations (OneToMany)](#relations)
-* [Set Relations In Resolvers](#relations-in-resolver)
+* [Set Relations In Resolvers](#relations-in-resolvers)
 * [Dependency Injection](#dependency-injection)
 * [Entity Resolver](#entity-resolver)
 * [Testing Resolvers](#testing-resolvers)
@@ -1339,3 +1339,122 @@ map:
 {"0":["variables.file"]}
 ```
 and 0 is the image file.
+
+## RELATIONS
+Here is the [document](https://www.tutorialspoint.com/typeorm/typeorm_relations.htm#:~:text=Relations%20are%20used%20to%20refer,powerful%20and%20efficiently%20store%20information.). I will use just one to many relationship.
+
+We need to install a package first.
+```bash
+npm i --save type-graphql-dataloader
+```
+
+### Relations in entities
+Let's create school part four project.<br>
+I want students and projects. Student can create multiple project but projects can't created by multiple student. So one to many is the one relationship that I wanted.
+
+Let's create Project Entitiy first:
+```ts
+import { Field, ID, ObjectType } from "type-graphql";
+import { TypeormLoader } from "type-graphql-dataloader";
+import { Entity, PrimaryGeneratedColumn, Column, BaseEntity, ManyToOne } from 'typeorm';
+import {Student} from "./Student"; 
+
+@ObjectType() 
+@Entity()
+export class Project extends BaseEntity {  
+   @Field(() => ID)
+   @PrimaryGeneratedColumn() 
+   id: number; 
+   
+   @Field()
+   @Column() 
+   name: string; 
+
+  //<relationship_name>Id
+   @Column()
+   @Field(()=>ID)
+   studentId:number
+   
+   //relationship
+   @ManyToOne(()=>Student,student=>student.projects,{onDelete:"SET NULL"})
+   @Field(()=>Student)
+   @TypeormLoader()//ormloader
+   student: Student
+}
+```
+and let's create Students Entity:
+```ts
+import { Entity, PrimaryGeneratedColumn, Column, BaseEntity, OneToMany } from 'typeorm';
+import {Project} from "./Project"; 
+import { Field, ID, ObjectType } from "type-graphql";
+import { TypeormLoader } from 'type-graphql-dataloader';
+
+@ObjectType()
+@Entity() 
+export class Student extends BaseEntity{  
+   @Field(() => ID)
+   @PrimaryGeneratedColumn() 
+   id: number; 
+   
+   @Field()
+   @Column() 
+   name: string; 
+   
+   //relationShip (no project id needed, this field will take the projects)
+   @OneToMany(()=>Project,project=>project.student)
+   @Field(() => [Project],{nullable:true})
+   @TypeormLoader()//ormloader
+   projects: Project[]
+}
+```
+
+thats it.
+
+Those entities are connected now. Let's see how to connect them in resolvers:
+
+### Relations in Resolvers
+
+let's create SchoolResolver:
+```ts
+@Resolver()
+export class SchoolResolver {
+  
+  @Mutation(()=>Student || null)// basic student creator
+  async createStudent(
+    @Arg('name') name:string
+  ){
+    return await Student.create({name}).save() 
+  }
+
+  @Mutation(()=>Project)// basic project creator with student
+  async createProject(
+    @Arg('name') name:string,
+    @Arg('studentId') studentId:number
+  ):Promise<Project> {
+    let student = await Student.findOne({id:studentId})//get student object
+
+    return await Project.create({name,student}).save()//we are passing student object
+  }
+}
+```
+
+Now let's look at how to append student to existing project: (we can also make project's student part nullable and create without student. That's why we could have to append student after the creation.)
+```ts
+  @Mutation(()=> Boolean)//it will return boolean
+  async appendStudentToProject(
+    @Arg('studentId',()=> Int) studentId : number, //input argument
+    @Arg('projectId',()=> Int) projectId : number //input argument
+  ):Promise<Boolean>{
+    let proj = await Project.findOne({id:projectId})//get project
+    let student = await Student.findOne({id:studentId})//get student
+
+    if(student == null || proj == null) return false//validate
+
+    proj.student = student //append
+
+    await proj.save()//save
+    return true//finish
+  }
+```
+
+and that's it. If you wanna learn more, check out [here](#https://www.tutorialspoint.com/typeorm/typeorm_relations.htm#:~:text=Relations%20are%20used%20to%20refer,powerful%20and%20efficiently%20store%20information.).
