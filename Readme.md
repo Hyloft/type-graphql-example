@@ -1459,6 +1459,8 @@ Now let's look at how to append student to existing project: (we can also make p
 
 and that's it. If you wanna learn more, check out [here](#https://www.tutorialspoint.com/typeorm/typeorm_relations.htm#:~:text=Relations%20are%20used%20to%20refer,powerful%20and%20efficiently%20store%20information.).
 
+**!!** We cant get student's ***projects*** field or project's ***student*** field in response. We need to use [Field Resolver](#creating-entity-resolver) for this. You should check out [DI](#dependency-injection) first.
+
 ## Dependency Injection
 Dependency injection is a really useful pattern that helps in decoupling parts of the app.<br>
 We need to install @typedi first.
@@ -1527,3 +1529,60 @@ export class SchoolResolver {
   
 }
 ```
+## Entity Resolver
+
+**Why & How?**
+
+* Entity resolver is the resolver which used for just one entity.
+* Entity resolver helps us to use `FieldResolver` for entity. That's how we can return the things that we wanted for a field.
+
+Let's create StudentRepo first.
+
+***StudentRepo.ts***
+```ts
+import { EntityRepository, Repository } from "typeorm";
+import { Student } from '../../../entity/Student';
+import { Project } from '../../../entity/Project';
+
+@EntityRepository(Student)
+export class StudentRepo extends Repository<Student>{
+
+  async getAll() { //return all the students
+    return await this.find()
+  }
+
+  async getOne(id: number) {//return one spesific user
+    return await this.findOne({id:id})
+  }
+
+  async getProjects(id:number):Promise<Project[]>{ //get user's projects
+      return await Project.find({studentId:id})
+  }
+}
+```
+`getProjects()` function will be handy in resolver.
+
+### Creating Entity Resolver:
+
+***StudentResolver.ts***
+```ts
+import { Student } from './../../entity/Student';
+import { FieldResolver, Resolver, Root } from "type-graphql";
+import { InjectRepository } from "typeorm-typedi-extensions";
+import { StudentRepo } from './repo/StudentRepo';
+
+@Resolver(() => Student)
+export class StudentResolver {
+  @InjectRepository(StudentRepo) //DI
+  private readonly studentRepo: StudentRepo; 
+
+  @FieldResolver(() => Student, { nullable: true })//Here is the FieldResolver
+  async projects( // this is for `projects` field.
+    @Root() student: Student //Root is the Student object
+    ) {
+    return this.studentRepo.getProjects(student.id); //returns all the projects
+  }
+}
+```
+now we get student's ***projects*** field in the responses.
+
