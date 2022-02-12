@@ -510,7 +510,7 @@ Lastlt we need to create scripts:
     "test": "npm run db:setup && jest --detectOpenHandles --runInBand"
 }
 ```
-Test files will explain in [Tests](#tests)
+Test files will explain in [Tests Files](#setting-up-test-envirovment).
 
 ## RESOLVER BASICS
 Resolvers helps us to create api with graphql
@@ -1534,7 +1534,7 @@ export class SchoolResolver {
 **Why & How?**
 
 * Entity resolver is the resolver which used for just one entity.
-* Entity resolver helps us to use `FieldResolver` for entity. That's how we can return the things that we wanted for a field.
+* Entity resolver helps us to use **FieldResolver** for entity. That's how we can return the things that we wanted for a field.
 
 Let's create StudentRepo first.
 
@@ -1586,3 +1586,132 @@ export class StudentResolver {
 ```
 now we get student's ***projects*** field in the responses.
 
+## Testing Resolvers
+
+Jest and faker helps us in this part.
+```bash
+npm i --save-dev jest ts-jest faker @types/jest @types/faker @faker-js/faker
+```
+
+### Setting up test envirovment
+* **src**
+    * *jest.config.js*
+    * **test**
+        * *setup.ts*
+        * *Tests.test.ts*
+        * **modules**
+            * *gCall.ts*
+            * *testConn.ts*
+        * **<_areaName>Tests**
+          * *<_Resolver>Test.ts*
+
+***jest.config.js***
+```js
+module.exports = {
+  preset: 'ts-jest',
+  testEnvironment: 'node',
+}
+```
+***setup.ts***
+```ts
+import { testConn } from "./modules/testConn";
+
+testConn(true).then(()=>process.exit());
+```
+
+***testConn.ts***
+```ts
+import { createConnection } from "typeorm"
+
+export const testConn=(drop : boolean=false)=>{
+    return createConnection({
+        name:"default",
+        type: "postgres",
+        host: "localhost",
+        port: 5432,
+        username: "postgres",
+        password: "postgres",
+        database: "type-graphql-learning-test",//changed db name with -test.
+        synchronize:true,
+        dropSchema:drop,//drop schema after the test
+        entities: [
+            __dirname+"/../../entity/*.*"]
+    })
+}
+```
+
+also need to add some scripts to package.json.
+```json
+"scripts":[
+  //...
+  "db:setup": "ts-node ./src/test/setup.ts",//run setup.ts
+  "test": "npm run db:setup && jest --detectOpenHandles --runInBand"//run dbsetup & tests
+]
+```
+***Tests.test.ts***
+```ts
+import { Connection } from 'typeorm';
+import { testConn } from './modules/testConn';
+import { redis } from '../redis';
+import { registerTest } from './userTests/RegisterTest';
+
+let conn: Connection;
+beforeAll(async () => {
+    if (redis.status == "end") {
+        await redis.connect();
+      }
+    conn = await testConn();
+});
+afterAll(async () => {
+    redis.disconnect();
+    await conn.close();
+});
+
+//Call tests in here...
+
+registerTest()//example
+```
+That's almost it. We need to create one helper function.
+
+***gCall.ts***
+```ts
+import { graphql, GraphQLSchema } from "graphql"
+import { Maybe } from "type-graphql";
+import { createSchema } from '../../utils/createSchema';
+
+interface Options{
+    source:string,
+    variableValues?:Maybe<{
+        [key: string]: any;
+    }>,
+    userId?:number
+}
+
+let schema : GraphQLSchema;
+
+export const gCall = async ({source, variableValues, userId}:Options)=>{
+    if(!schema){
+        schema = await createSchema()
+    }
+    
+    return graphql({
+        schema,
+        source,
+        variableValues,
+        contextValue:{
+            req:{
+                session:{
+                    userId
+                }
+            },
+            res:{
+                //clearCookie: jest.fn()
+            }
+        }
+    })
+}
+```
+We gonna use it a lot while using graphql queries and mutations for tests.
+
+### Writing Tests:
+Let's create a register test. We'll test [RegisterResolver](#register-resolver) which we did before.
