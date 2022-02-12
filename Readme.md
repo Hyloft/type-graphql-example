@@ -1,4 +1,4 @@
-<p align="center"><img width=100% src="media/typ.png"></p>
+<p align="center"><img width=100% src="media/typp.png"></p>
 <h1 align="center">TypeGraphQL API Example</h1>
 
 
@@ -39,7 +39,8 @@
 ## BASIC SETUP
 **First of all if you don't have an up and running postgres and redis server you should install it .**
 
-You can install `Redis` from [here](https://github.com/MicrosoftArchive/redis/releases/download/win-3.2.100/Redis-x64-3.2.100.msi) and `Postgres` from [here](https://www.enterprisedb.com/downloads/postgres-postgresql-downloads).
+You can install `Redis` from [here](https://github.com/MicrosoftArchive/redis/releases/download/win-3.2.100/Redis-x64-3.2.100.msi) and `Postgres` from [here](https://www.enterprisedb.com/downloads/postgres-postgresql-downloads).<br>
+After the install postgres, we have to create **postgres db** on **pgAdmin4** called `type-graphql-learning` and `type-graphql-learning-test` (like in *`ormconfig.js`* file)
 
 After the installation we are ready to install npm packages.
 
@@ -369,7 +370,7 @@ import { ApolloServerPluginLandingPageGraphQLPlayground } from "apollo-server-co
 **`buildSchema`** function for *graphql*:
 * `resolvers` feature helps to search every Resolver in modules folder.
 * `container` like I said it helps DI
-* `authChecker` checks session.userId in request. Rejects if userId not exist.
+* `authChecker` checks `session.userId` in request. Rejects if userId not exist.
 
 **`apolloServer`:**
 * `schema` apollo needs graphql schema
@@ -473,6 +474,7 @@ export const redis = new Redis();
 #### ABOUT TYPES:
 We need Upload and Context type.
 
+### Mycontext type
 **MyContext.ts**
 ```ts
 import { Request,Response } from "express"
@@ -496,7 +498,17 @@ export interface Upload {
   createReadStream: () => Stream;
 }
 ```
-and this one will be handy when uploading files
+and this one will be handy when uploading files.
+
+Lastlt we need to create scripts:
+```json
+"scripts": {
+    "start": "ts-node-dev --respawn src/index.ts",
+    "db:setup": "ts-node ./src/test/setup.ts",
+    "test": "npm run db:setup && jest --detectOpenHandles --runInBand"
+}
+```
+Test files will explain in [Tests](#tests)
 
 ## RESOLVER BASICS
 Resolvers helps us to create api with graphql
@@ -538,7 +550,7 @@ query
 
 Just send it. Then you'll get response of hello world.
 
-#### MUTATION EXAMPLE ('PUT','POST','GET' in REST API)
+#### MUTATION EXAMPLE ('PUT','POST','DELETE' in REST API)
 
 ```ts
 //in resolver
@@ -637,7 +649,7 @@ Entities are **database models** and **object types**.<br>
 Basically Entity means orm system.
 
 We can look into user entity which used in project.<br>
-**User entity**:
+### User entity:
 
 ```ts
 import { Field, ID, ObjectType, Root } from "type-graphql";
@@ -780,7 +792,7 @@ return function (object: Object, propertyName: string) {
 }
 ```
 
-It is like a template. Only field we have to imagine is validate function:
+It is like a template. Only field we have to notice in there is validate function:
 ```ts
 validate(email: string) {
     return User.findOne({where:{email}}).then(user => {
@@ -792,3 +804,189 @@ validate(email: string) {
 it wants an email as a string , checks and returns.<br>
 
 That's how custom validators can be created.
+
+## RESOLVERS
+explaining of resolvers whichs used in project.
+
+### Register Resolver:
+```ts
+import { Arg, Mutation, Resolver } from "type-graphql";
+import bcrypt from 'bcryptjs'//to hash password
+import { User } from '../../entity/User';
+import { RegisterInput } from './register/RegisterInput';
+
+@Resolver()
+export class RegisterResolver {
+    @Mutation(() => User)
+    async register(
+        @Arg("data") {email,firstName,lastName,password} : RegisterInput //expected input type
+    ):Promise<User> {
+
+        const hashedPassword = await bcrypt.hash(password,12);//hashing
+
+        const user = await User.create({//creating user
+            firstName,
+            lastName,
+            email,
+            password:hashedPassword
+        }).save()
+
+        return user//returning user
+    }
+}
+```
+okay. only thing I think that I have to explain is `Arg('data')` part. 
+It means **expected input is an object** called "data" which type is `RegisterInput` and has `{email,firstName,lastName,password}` fields.
+
+Also [User Entity](#user-entity) has been used in this part.
+
+***let's look at RegisterInput.ts***
+```ts
+import { Length, IsEmail } from "class-validator";
+import { Field, InputType } from "type-graphql";
+import { isEmailAlreadyExist } from "./isEmailAlreadyExist";
+import { PasswordInput } from '../shared/PasswordInput';
+
+@InputType()
+export class RegisterInput extends PasswordInput{
+    @Field()
+    @Length(2,255,{message:"must be around 2 and 255 characters"})
+    firstName:string
+
+    @Field()
+    @Length(2,255)
+    lastName:string
+
+    @Field()
+    @IsEmail()
+    @isEmailAlreadyExist({message:"email already in use"})
+    email:string
+}
+```
+
+and ***PasswordInput.ts*** was:
+```ts
+@InputType()
+export class PasswordInput {
+    @Field()
+    password:string
+}
+```
+as you can see, RegisterInput type has all of the fields that `@Arg("data") {email,firstName,lastName,password}` expected.
+
+### Login Resolver
+
+Okay. Only different thing in this part is returning session cookie.
+We need `Ctx()` function for this. And [`MyContext`](#mycontext-type) type will help in this part.
+
+***LoginResolver.ts***
+```ts
+import { Arg, Ctx, Mutation, Resolver } from "type-graphql";
+import bcrypt from 'bcryptjs' //for decrypting
+import { User } from '../../entity/User';
+import { MyContext } from '../../types/MyContext';
+
+@Resolver()
+export class LoginResolver {
+    @Mutation(() => User,{nullable:true})
+    async login(
+        @Arg('email') email:string, //input
+        @Arg('password') password:string, //input
+        @Ctx() ctx : MyContext //context
+    ):Promise<User | null> {
+
+        const user = await User.findOne({where:{email}})
+
+        if (!user){ //checks did user found
+            return null
+        }
+
+        const valid = await bcrypt.compare(password, user.password)
+        if(!valid){ //checks does passwords maches
+            return null
+        }
+
+        ctx.req.session!.userId = user.id //append userid to cookies
+
+        return user
+    }
+}
+```
+`@Ctx() ctx : MyContext` helps to use context and reach request.<br>
+```ctx.req.session!.userId = user.id``` that's how userid passes to cookies. Then we can use this for authentication.
+
+## Authorization
+
+We passed userid to cookies on last part. Let's look at to how can we use it:
+
+### Basic Authentication:
+**Me.ts** ; basic resolver. If user is logged in, it returns the user else it returns error.
+
+```ts
+import { Ctx, Query, Resolver } from "type-graphql";
+import { User } from '../../entity/User';
+import { MyContext } from '../../types/MyContext';
+
+@Resolver()
+export class MeResolver {
+    @Query(() => User,{nullable:true,complexity:2})
+    async me(
+      @Ctx() ctx:MyContext //context
+    ):Promise<User|undefined> {
+        if(!ctx.req.session!.userId){
+            return undefined
+        }
+
+        return User.findOne(ctx.req.session!.userId)
+    }
+}
+```
+
+### Authentication with schema:
+```ts
+  const schema = await buildSchema({
+      //...
+      authChecker: ({ context :{req}}) => {
+        return !!req.session.userId
+      }
+  }) 
+```
+
+authChecker helps to check is user logged in.<br>
+We have to add `Authorized()` decorator to query or mutation that we want to check is user logged in.
+
+```ts
+@Authorized() //like this
+@Query(() => String)
+async hello():Promise<String> {
+    return 'hello world'
+}
+```
+after that users can't get hello world response without logged in. Because we defined the **auth function** in **schema** and used **auth decorator**.
+
+### Authentication with middleware (Custom Authentication):
+while using this method, we can define error messages. 
+Also we  need [MyContext](#mycontext-type) again. Because we'll use context type.
+```ts
+import { MiddlewareFn } from "type-graphql";
+import { MyContext } from '../../types/MyContext';
+
+export const isAuth: MiddlewareFn<MyContext> = async ({ context }, next) => {
+    if (!context.req.session.userId){ //checks if userid exists in cookies
+        throw new Error("not authenticated");//error message
+    }
+
+    return next();//next if is exists
+  };
+```
+then we can use it like this:
+```ts
+import { isAuth } from '../middleware/isAuth';
+
+//...in resolver
+  @UseMiddleware(isAuth) // @Authorized would work too but I created it myself.
+  @Query(() => String)
+  async hello():Promise<String> {
+      return 'hello world'
+  }
+```
