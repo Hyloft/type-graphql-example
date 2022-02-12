@@ -1244,7 +1244,7 @@ export class ChangePasswordResolver {
 
         //Change password
         user.password = await bcrypt.hash(password,12)
-        await user.save()//also user.update will work.
+        await user.save()//also user.update would work.
 
         ctx.req.session!.userId = user.id //push user to cookies
 
@@ -1264,3 +1264,78 @@ export class ChangePasswordInput extends PasswordInput {
     token:string
 }
 ```
+
+## File Upload
+We are using `graphql-upload` for this.
+```bash
+npm i --save graphql-upload fs
+```
+And some changes in index.ts:
+```ts
+import { graphqlUploadExpress } from 'graphql-upload';//imported before
+//into main function
+  //...
+  app.use(graphqlUploadExpress());
+```
+
+
+First of all we have to create a interface called ***Upload***
+```ts
+import { Stream } from "stream";
+
+export interface Upload {
+  filename: string;
+  mimetype: string;
+  encoding: string;
+  createReadStream: () => Stream;
+}
+```
+After that, let's create a ProfilePicture resolver:<br>
+***ProfilePicture.ts***
+```ts
+import { Resolver, Mutation, Arg } from "type-graphql";
+import { GraphQLUpload } from "graphql-upload";
+import { createWriteStream } from "fs";
+import { Upload } from "../../types/Upload";
+
+
+@Resolver()
+export class ProfilePictureResolver {
+  @Mutation(() => Boolean,{complexity:14}) // we are returning bool
+  async addProfilePicture(
+    @Arg("picture", () => GraphQLUpload){
+      createReadStream,
+      filename
+      }: Upload // argument type is Upload
+  ): Promise<boolean> {
+    return new Promise(async (resolve, reject) =>{
+
+      let parsedfile =filename.split('.')
+      if(parsedfile[parsedfile.length - 1] !== 'png'
+       && parsedfile[parsedfile.length - 1] !== 'jpg')
+       {return reject(false)}//check is file ends with 'png' or 'jpg'
+
+      createReadStream() //save and return false on error
+        .pipe(createWriteStream(__dirname + `/../../../images/${filename}`))
+        .on("finish", () => resolve(true))
+        .on("error", () => reject(false))
+    });
+  }
+}
+```
+### Using Upload Resolver:
+We can't use graphql playground for this.
+We have to test it with postman.
+
+<img src="media/postman.png"/>
+
+operations:
+
+```json
+{ "query": "mutation ($file: Upload!) { addProfilePicture(picture: $file)}", "variables": { "file": null } }
+```
+map:
+```json
+{"0":["variables.file"]}
+```
+and 0 is the image file.
