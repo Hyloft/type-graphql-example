@@ -1,12 +1,18 @@
 <p align="center"><img width=100% src="media/typp.png"></p>
 <h1 align="center">TypeGraphQL API Example</h1>
 
+### Introduction
+This is example app's documentation that I wrote so that I can easily remember each section when I back to using typegraphql from other frameworks and also to have an idea about how *github readme* works.
+
+If you are reading this, I think only [Field Resolver](#entity-resolver) and [Testing](#testing-resolvers) parts may be worth to read (FieldResolver is the way how I get relation fields from entities). The other parts explained probably better and more detailed in the [documentation](https://typegraphql.com/docs/introduction.html).
 
 ### Techs that has been used:
 
 **GraphQL:** TypeGraphQL, Apollo
 
-**Databases:** Redis,Postgres
+**ORM:** Typeorm
+
+**Database:** Redis,Postgres
 
 **Testing Library:** Jest
 
@@ -38,7 +44,7 @@
 * [Testing Resolvers](#testing-resolvers)
 
 ## BASIC SETUP
-**First of all if you don't have an up and running postgres and redis server you should install it .**
+**First of all if you don't have up and running postgres and redis server, you should install them.**
 
 You can install `Redis` from [here](https://github.com/MicrosoftArchive/redis/releases/download/win-3.2.100/Redis-x64-3.2.100.msi) and `Postgres` from [here](https://www.enterprisedb.com/downloads/postgres-postgresql-downloads).<br>
 After the install postgres, we have to create **postgres db** on **pgAdmin4** called `type-graphql-learning` and `type-graphql-learning-test` (like in *`ormconfig.js`* file)
@@ -1588,12 +1594,12 @@ now we get student's ***projects*** field in the responses.
 
 ## Testing Resolvers
 
-Jest and faker helps us in this part.
+Jest and faker will help us in this part.
 ```bash
 npm i --save-dev jest ts-jest faker @types/jest @types/faker @faker-js/faker
 ```
 
-### Setting up test envirovment
+### Setting up test environment
 * **src**
     * *jest.config.js*
     * **test**
@@ -1715,3 +1721,136 @@ We gonna use it a lot while using graphql queries and mutations for tests.
 
 ### Writing Tests:
 Let's create a register test. We'll test [RegisterResolver](#register-resolver) which we did before.
+
+***RegisterTest.ts***
+```ts
+import { gCall } from '../modules/gCall';
+import faker from '@faker-js/faker';
+import { User } from '../../entity/User'
+
+//mutation as a string
+const registerMutation = `
+mutation Register($data: RegisterInput!) {
+  register(
+    data: $data
+  ) {
+    id
+    firstName
+    lastName
+    email
+    name
+  }
+}
+`;
+
+export const registerTest = ()=> describe("Register", () => {//describe test's title
+    jest.setTimeout(15000) // default is 5000. Sometimes it takes longer than 5sec
+
+    it("create user", async () => {//create test called 'create user'
+      
+      const user = {//create user object with fake names
+        firstName: faker.name.firstName(),
+        lastName: faker.name.lastName(),
+        email: faker.internet.email(),
+        password: faker.internet.password()
+      };
+  
+      //here is the way how we make mutations and queries than get responses.
+      const response = await gCall({
+        source: registerMutation,//mutation
+        variableValues: {//it may be null but registerMutation need data
+          data: user
+        }
+      });
+  
+      //here is the first test. Checks if response match with expected response.
+      expect(response).toMatchObject({
+        data: {
+          register: {
+            //it will return id too, but not need to check if it equal to something
+            firstName: user.firstName,
+            lastName: user.lastName,
+            email: user.email
+          }
+        }
+      });
+  
+      //get the user for other tests.
+      const dbUser = await User.findOne({ where: { email: user.email } });
+
+      expect(dbUser).toBeDefined();//must exist in db
+      expect(dbUser!.confirmed).toBeFalsy()//must be false before confirmation
+      expect(dbUser!.email).toBe(user.email)
+      expect(dbUser!.password == user.password).toBeFalsy()//must be hashed
+    });
+});
+```
+
+This test makes register mutation then checks the response with gcall and user in db.
+
+After that, all we have to do is call the `registerTest()` function inside the main test function ***Tests.test.ts*** which contains all the tests.
+
+And let's check me query's test.
+
+***MeTest.ts***
+```ts
+import { gCall } from '../modules/gCall';
+import faker from '@faker-js/faker';
+import { User } from '../../entity/User'
+
+//query returns user from session's userId
+const meQuery = ` 
+ {
+  me {
+    id
+    firstName
+    lastName
+    email
+  }
+}
+`;
+
+export const meTest = ()=> describe("Me", () => {//new test section
+
+    //TEST ONE
+    it("return user", async()=>{//new test
+
+      const user = await User.create({//create user to test with it.
+        firstName: faker.name.firstName(),
+        lastName: faker.name.lastName(),
+        email: faker.internet.email(),
+        password: faker.internet.password()
+      }).save();
+  
+      const response = await gCall({
+        source: meQuery,//query
+        userId:user.id//fake session
+      });
+  
+      expect(response).toMatchObject({//must return user
+        data: {
+          me:{
+            id: `${user.id}`,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            email: user.email
+        }
+        }
+      });
+    })
+  
+    //TEST TWO
+    it("return nothing", async () => {//new test field
+      const response = await gCall({
+        source: meQuery//query
+        //without session.userId
+      });
+  
+      expect(response).toMatchObject({//must return null this time.
+        data: {
+          me: null
+        }
+      });
+    });
+});
+```
