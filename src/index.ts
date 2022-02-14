@@ -10,8 +10,8 @@ import { ApolloServerPluginLandingPageGraphQLPlayground } from "apollo-server-co
 
 import session from 'express-session';
 import { graphqlUploadExpress } from 'graphql-upload';
-import createComplexityRule, { simpleEstimator,fieldExtensionsEstimator } from 'graphql-query-complexity';
-import { GraphQLError } from 'graphql';
+//import createComplexityRule, { simpleEstimator,fieldExtensionsEstimator } from 'graphql-query-complexity';
+//import { GraphQLError } from 'graphql';
 
 import {Container} from 'typeorm-typedi-extensions';
 
@@ -27,26 +27,26 @@ const RedisStore = connectRedis(session)
 useContainer(Container)
 
 
-const ruleComplexity = createComplexityRule({
-  maximumComplexity: 13,
+// const ruleComplexity = createComplexityRule({
+//   maximumComplexity: 13,
 
-  variables: {},
+//   variables: {},
 
 
-  onComplete: (complexity: number) => {console.log('Determined query complexity: ', complexity)},
+//   onComplete: (complexity: number) => {console.log('Determined query complexity: ', complexity)},
 
-  createError: (max: number, actual: number) => {
-    return new GraphQLError(`Query is too complex: ${actual}. Maximum allowed complexity: ${max}`);
-  },
+//   createError: (max: number, actual: number) => {
+//     return new GraphQLError(`Query is too complex: ${actual}. Maximum allowed complexity: ${max}`);
+//   },
 
-  estimators: [
-    fieldExtensionsEstimator(),
+//   estimators: [
+//     fieldExtensionsEstimator(),
 
-    simpleEstimator({
-      defaultComplexity: 1
-    })
-  ]
-});
+//     simpleEstimator({
+//       defaultComplexity: 1
+//     })
+//   ]
+// });
 
 
 
@@ -71,7 +71,7 @@ const main = async()=>{
     context: ({req,res}:any)=> ({req,res}),
     plugins: [ApolloServerPluginLandingPageGraphQLPlayground,],
     validationRules:[
-      ruleComplexity
+      //ruleComplexity
     ]
   })
 

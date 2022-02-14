@@ -153,7 +153,7 @@ const main = async()=>{
 
   await apolloServer.start()
 
-  apolloServer.applyMiddleware({app});
+  apolloServer.applyMiddleware({app,cors:false});
 
   app.listen(4000,()=>{
       console.log('server started on http://localhost:4000')
@@ -290,7 +290,7 @@ const main = async()=>{
   })
 
   const app = Express()
-  app.use(cors({credentials:true,origin:"http://localhost:4000"}))
+  app.use(cors({credentials:true,origin:"http://localhost:3000"}))
 
   const sessionOption: session.SessionOptions = {
     store: new RedisStore({
@@ -313,7 +313,7 @@ const main = async()=>{
 
   await apolloServer.start()
 
-  apolloServer.applyMiddleware({app});
+  apolloServer.applyMiddleware({app,cors:false}); // cors must be false in here
 
   app.listen(4000,()=>{
       console.log('server started on http://localhost:4000')
