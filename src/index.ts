@@ -10,8 +10,8 @@ import { ApolloServerPluginLandingPageGraphQLPlayground } from "apollo-server-co
 
 import session from 'express-session';
 import { graphqlUploadExpress } from 'graphql-upload';
-//import createComplexityRule, { simpleEstimator,fieldExtensionsEstimator } from 'graphql-query-complexity';
-//import { GraphQLError } from 'graphql';
+// import createComplexityRule, { simpleEstimator,fieldExtensionsEstimator } from 'graphql-query-complexity';
+// import { GraphQLError } from 'graphql';
 
 import {Container} from 'typeorm-typedi-extensions';
 
@@ -29,19 +29,13 @@ useContainer(Container)
 
 // const ruleComplexity = createComplexityRule({
 //   maximumComplexity: 13,
-
 //   variables: {},
-
-
 //   onComplete: (complexity: number) => {console.log('Determined query complexity: ', complexity)},
-
 //   createError: (max: number, actual: number) => {
 //     return new GraphQLError(`Query is too complex: ${actual}. Maximum allowed complexity: ${max}`);
 //   },
-
 //   estimators: [
 //     fieldExtensionsEstimator(),
-
 //     simpleEstimator({
 //       defaultComplexity: 1
 //     })
