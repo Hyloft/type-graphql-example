@@ -76,9 +76,7 @@ const main = async()=>{
   })
 
   const app = Express()
-  app.use(cors({credentials:true,origin:"http://localhost:4000"}))
-
-  //
+  app.use(cors({origin:'http://localhost:3000',credentials:true}))
   const sessionOption: session.SessionOptions = {
     store: new RedisStore({
       client: redis as any,
@@ -88,8 +86,7 @@ const main = async()=>{
     resave: false,
     saveUninitialized: false,
     cookie: {
-      httpOnly: true,
-      sameSite: "lax",
+      httpOnly:true,
       secure: process.env.NODE_ENV === "production",
       maxAge: 1000 * 60 * 60 * 24 * 7 * 365, // 7 years
     },
@@ -101,7 +98,7 @@ const main = async()=>{
 
   await apolloServer.start()
 
-  apolloServer.applyMiddleware({app});
+  apolloServer.applyMiddleware({app,cors:false});
 
   app.listen(4000,()=>{
       console.log('server started on http://localhost:4000')
