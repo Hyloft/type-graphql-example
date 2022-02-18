@@ -4,22 +4,19 @@ on: push
 jobs:
   # Label of the container job
   build:
-    # Containers must run in Linux based operating systems
     runs-on: ubuntu-latest
-    # Docker Hub image that `container-job` executes in
-    # container: node:16.14
+
+    # container: node:16.14 !! DON'T USE THIS. IT CAUSES POSTGRES CONNECTION ERROR
 
     # Service containers to run with `container-job`
     services:
-      # Label used to access the service container
+
       postgres:
-        # Docker Hub image
         image: postgres:latest
-        # Provide the password for postgres
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
-          # POSTGRES_HOST: localhost
+          # POSTGRES_HOST: localhost !! DON'T NEEDED
           POSTGRES_DB: type-graphql-learning-test
         ports:
         # Maps tcp port 5432 on service container to the host
@@ -34,7 +31,6 @@ jobs:
 
 
       redis:
-        # Docker Hub image
         image: redis
         # Set health checks to wait until redis has started
         options: >-
