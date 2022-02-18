@@ -3,7 +3,7 @@ on: push
 
 jobs:
   # Label of the container job
-  container-job:
+  build:
     # Containers must run in Linux based operating systems
     runs-on: ubuntu-latest
     # Docker Hub image that `container-job` executes in
@@ -14,12 +14,12 @@ jobs:
       # Label used to access the service container
       postgres:
         # Docker Hub image
-        image: postgres:12
+        image: postgres:lastest
         # Provide the password for postgres
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
-          POSTGRES_HOST: localhost
+          # POSTGRES_HOST: localhost
           POSTGRES_DB: type-graphql-learning-test
         ports:
         # Maps tcp port 5432 on service container to the host
