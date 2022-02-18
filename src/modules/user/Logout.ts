@@ -7,15 +7,15 @@ export class LogoutResolver {
   async Logout(
       @Ctx() ctx:MyContext
   ):Promise<Boolean>{
-      return new Promise((res,rej)=>{
+      return new Promise((res,rej)=>
           ctx.req.session.destroy(err=>{
               if(err){
                   return rej(false)
               }
-
               ctx.res.clearCookie('qid')
+              
               return res(true)
           })
-      })
+      )
   }
 }

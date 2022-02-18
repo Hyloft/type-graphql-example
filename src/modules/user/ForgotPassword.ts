@@ -20,7 +20,7 @@ export class ForgotPasswordResolver {
         const token = v4()
         await redis.set(forgotPasswordPrefix + token,user.id,"ex",60*60*24) // one day expiration
     
-        const url= `http://localhost:4000/user/change-password/${token}`
+        const url= `http://localhost:3000/user/change-password/${token}`
 
         await sendEmail(email,url)
         
