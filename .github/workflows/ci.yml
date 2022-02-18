@@ -7,7 +7,7 @@ jobs:
     # Containers must run in Linux based operating systems
     runs-on: ubuntu-latest
     # Docker Hub image that `container-job` executes in
-    container: node
+    container: node:16.14-jessie
 
     # Service containers to run with `container-job`
     services:
@@ -21,12 +21,17 @@ jobs:
           POSTGRES_PASSWORD: postgres
           POSTGRES_HOST: localhost
           POSTGRES_DB: type-graphql-learning-test
+        ports:
+        # Maps tcp port 5432 on service container to the host
+          - 5432:5432
+
         # Set health checks to wait until postgres has started
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+
 
       redis:
         # Docker Hub image
