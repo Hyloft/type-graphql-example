@@ -7,6 +7,10 @@ export class Classes extends BaseEntity{
    @Field(() => ID)
    @PrimaryGeneratedColumn() 
    id: number; 
+
+   @Field()
+   @Column()
+   isOpen:boolean;
    
    @Field()
    @Column() 

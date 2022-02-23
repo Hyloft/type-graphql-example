@@ -42,6 +42,7 @@ If you are reading this, I think only [Field Resolver](#entity-resolver) and [Te
 * [Dependency Injection](#dependency-injection)
 * [Entity Resolver](#entity-resolver)
 * [Testing Resolvers](#testing-resolvers)
+* [Running Migrations Manually](#manual-migrations)
 
 ## BASIC SETUP
 **First of all if you don't have up and running postgres and redis server, you should install them.**
@@ -1854,3 +1855,38 @@ export const meTest = ()=> describe("Me", () => {//new test section
     });
 });
 ```
+
+## Manual Migrations
+First, add this into ***package.json***:
+```json
+"typeorm": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js"
+```
+
+and add this into ***ormconfig.js***:
+```json
+    "cli": {
+        "migrationsDir": "src/migrations/new"
+    },
+    "migrations": [
+        "src/migrations/**/*.{ts,js}"
+    ]
+```
+
+then run this command:
+```bash
+npm run typeorm migration:generate -- -n <migrationNameHere>
+```
+
+<br>
+
+!! if you get errors you can try to install this:
+```bash
+npm i --save-dev tsconfig-paths
+```
+
+<br>
+
+lastly, run this command to run migrations:
+```bash
+npm run typeorm migration:run
+``` 

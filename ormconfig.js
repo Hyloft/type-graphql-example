@@ -10,5 +10,11 @@ module.exports={
     "logging":true,
     "entities": [
         __dirname+"/src/entity/*.*"
-    ]
+    ],
+    "migrations": [
+        "src/migrations/**/*.{ts,js}"
+    ],
+    "cli": {
+        "migrationsDir": "src/migrations/new"
+    }
  }
